@@ -10,6 +10,33 @@ import pickle
 import numpy as np
 import cv2
 
+def process_duration(code, code_feat):
+    uniq_code_count = []
+    uniq_code_feat = []
+    for i in range(code.size(0)):
+        _, count = torch.unique_consecutive(code[i, :], return_counts=True)
+
+        if len(count) > 2:
+            # remove first and last code as segment sampling may cause incomplete segment length
+            uniq_code_count.append(count[1:-1])
+            uniq_code_idx = count.cumsum(dim=0)[:-2]
+        else:
+            uniq_code_count.append(count)
+            uniq_code_idx = count.cumsum(dim=0) - 1
+        uniq_code_feat.append(code_feat[i, uniq_code_idx, :].view(-1, code_feat.size(2)))
+    
+    uniq_code_count = torch.cat(uniq_code_count)
+
+    # collate feat
+    max_len = max(feat.size(0) for feat in uniq_code_feat)
+    out = uniq_code_feat[0].new_zeros((len(uniq_code_feat), max_len, uniq_code_feat[0].size(1)))
+    mask = torch.arange(max_len).repeat(len(uniq_code_feat), 1)
+    for i, v in enumerate(uniq_code_feat):
+        out[i, : v.size(0)] = v
+        mask[i, :] = mask[i, :] < v.size(0)
+
+    return out, mask.bool(), uniq_code_count.float()
+
 class UnitAVRenderer(CodeHiFiGANVocoder):
     def __init__(
         self, checkpoint_path: str, model_cfg: Dict[str, str], lang: str, fp16: bool = False
@@ -156,14 +183,34 @@ class CodeHiFiGANModel_spk(CodeHiFiGANModel):
             spkr = self._upsample(spkr, x.shape[-1])
             x = torch.cat([x, spkr], dim=1)
 
-        for k, feat in kwargs.items():
-            if k in ["spkr", "code", "f0", "dur_prediction"]:
-                continue
-
             feat = self._upsample(feat, x.shape[-1])
             x = torch.cat([x, feat], dim=1)
+        
+        dur_losses = None
+        if self.dur_predictor and self.training:
+            # Re-calculate unique code features for duration loss calculation
+            # This is duplicate work if we already did it above but CodeHiFiGANModel_spk 
+            # structure doesn't easily allow passing it down.
+            # Assuming 'code' in kwargs is the repeated/aligned code suitable for audio gen.
+            
+            # We need to extract unique codes to train the predictor.
+            # (Re-using the logic from DurationCodeGenerator)
+            x_for_dur = self.dict(kwargs["code"]).transpose(1, 2)
+            uniq_code_feat, uniq_code_mask, dur = process_duration(
+                    kwargs['code'], x_for_dur.transpose(1, 2))
+            log_dur_pred = self.dur_predictor(uniq_code_feat)
+            log_dur_pred = log_dur_pred[uniq_code_mask]
+            log_dur = torch.log(dur + 1)
+            dur_losses = F.mse_loss(log_dur_pred, log_dur, reduction="mean")
+            
+            return super(CodeHiFiGANModel, self).forward(x), dur_losses
 
-        return super(CodeHiFiGANModel, self).forward(x), torch.repeat_interleave(kwargs["code"], dur_out.view(-1))
+        if self.dur_predictor and kwargs.get("dur_prediction", False):
+            # Inference with duration prediction: Return expanded code for FaceRenderer
+            return super(CodeHiFiGANModel, self).forward(x), torch.repeat_interleave(kwargs["code"], dur_out.view(-1))
+        
+        # Default / Evaluation without Duration Prediction: Return original code
+        return super(CodeHiFiGANModel, self).forward(x), kwargs["code"]
 
 
 class FaceRenderer(nn.Module):
