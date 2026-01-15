@@ -18,3 +18,5 @@ data/
 *.wav
 *.tar
 *.bin
+
+.conda/
