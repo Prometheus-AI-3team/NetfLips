@@ -6,7 +6,7 @@ import librosa
 import numpy as np
 from omegaconf import OmegaConf
 
-# 경로 설정 (본인 경로에 맞게 수정)
+# 경로 설정
 standard_paths = [p for p in sys.path if "site-packages" in p or "lib/python" in p]
 for p in standard_paths:
     if p in sys.path:
@@ -38,10 +38,9 @@ except Exception as e:
 
 from fairseq import checkpoint_utils
 
-# 경로 설정 (본인 경로에 맞게 수정)
 CHECKPOINT_PATH = "/home/2022113135/av2av/checkpoints/mavhubert_large_noise.pt"
 LIST_FILE = "/home/2022113135/av2av/selected_files.txt"
-OUT_DIR = "/home/2022113135/datasets/zeroth_test_units"
+OUT_DIR = "/home/2022113135/datasets/zeroth_units"
 os.makedirs(OUT_DIR, exist_ok=True)
 
 def load_mavhubert():
@@ -191,61 +190,94 @@ def load_mavhubert():
 print("\n--- Step 1: Loading Model ---")
 model = load_mavhubert()
 
-print("\n--- Step 2: Testing Top 10 Files ---")
+print("\n--- Step 2: Testing ---")
 with open(LIST_FILE, "r") as f:
-    test_files = [line.strip() for line in f.readlines()[:10]]
+    all_files = [line.strip() for line in f.readlines()]
 
 print("\n--- Step 3: Extracting Units (Audio-Only Mode) ---")
-for i, f in enumerate(test_files):
+for i, f in enumerate(all_files):
     try:
-        audio, _ = librosa.load(f, sr=16000)
+        # --- 전처리 강화 ---
+        y, _ = librosa.load(f, sr=16000)
+        y = librosa.util.normalize(y) # 전체 볼륨 최적화
+        y, _ = librosa.effects.trim(y, top_db=20) 
+        y = librosa.effects.preemphasis(y, coef=0.98) # 고주파 더 강하게 강조
         
-        # 104차원 멜 스펙트로그램 추출
+        # --- 멜 스펙트로그램 해상도 조정 ---
         mel = librosa.feature.melspectrogram(
-            y=audio, sr=16000, n_mels=104, 
-            n_fft=1024, hop_length=640, win_length=1024
+            y=y, sr=16000, n_mels=104, 
+            n_fft=2048, hop_length=640, win_length=1280 # FFT 창을 키워 해상도 확보
         )
+        log_mel = librosa.power_to_db(mel)
         
-        # 로그 변환 후 정규화 (Mean 0, Var 1)
-        log_mel = librosa.power_to_db(mel, ref=np.max)
+        # Instance Normalization (강화된 버전)
         log_mel = (log_mel - np.mean(log_mel)) / (np.std(log_mel) + 1e-6)
         
-        mel_tensor = torch.from_numpy(log_mel).float().cuda().unsqueeze(0) # [1, 104, T]
+        mel_input = torch.from_numpy(log_mel).float().cuda().unsqueeze(0)
+        x = mel_input.transpose(1, 2)
 
         with torch.no_grad():
-            # 모델의 projection 레이어 통과 [B, 104, T] -> [B, T, 1024]
-            x = mel_tensor.transpose(1, 2) 
-            res_x = model.feature_extractor_audio.proj(x) 
+            res_x = model.feature_extractor_audio.proj(x)            
+            x_in = res_x.transpose(0, 1)
             
-            # Encoder 통과 및 유닛 추출
-            res_x, _ = model.encoder(res_x, padding_mask=None)
+            # 레이어 앙상블 (4, 6, 8, 12층 - 고차원 정보 살짝 추가)
+            layer_outputs = []
+            target_layers = [4, 6, 8, 12]
+            for idx, layer in enumerate(model.encoder.layers):
+                x_in, _ = layer(x_in, self_attn_padding_mask=None)
+                if idx + 1 in target_layers:
+                    layer_outputs.append(x_in.transpose(0, 1))
+                if idx + 1 == 12: break
             
+            inter_x = torch.mean(torch.stack(layer_outputs), dim=0)
+            
+            # Embedding & Linear Projection
             if hasattr(model, 'final_proj'):
-                emb = model.final_proj(res_x)
+                emb = model.final_proj(inter_x) 
             else:
-                emb = torch.nn.functional.linear(res_x, model.label_predictor_weight)
+                emb = torch.nn.functional.linear(inter_x, model.label_predictor_weight)
+                
+            # 임베딩 화이트닝: 분포를 강제로 사방으로 펼침
+            emb = (emb - emb.mean(dim=1, keepdim=True)) / (emb.std(dim=1, keepdim=True) + 1e-6)
             
-            # 임베딩 값 살아있는지 확인
-            print(f"DEBUG: Emb Mean: {emb.mean().item():.4f}, Std: {emb.std().item():.4f}, Max: {emb.max().item():.4f}")
+            emb = torch.nn.functional.normalize(emb, p=2, dim=-1)
+            codebook = torch.nn.functional.normalize(model.unit_codebook, p=2, dim=-1)
             
-            dists = torch.cdist(emb.squeeze(0), model.unit_codebook)
-            units = torch.argmin(dists, dim=-1).flatten().cpu()
-        
-        # 유닛 검증 로그
-        unique_units = torch.unique(units)
-        print(f"[{i+1}/10] ✅ Done: {os.path.basename(f)} | Unique: {len(unique_units)} | Sample: {units[10:20].tolist()}")
+            # 유사도(logits) 계산: [T, 256] @ [256, 2008] -> [T, 2008]
+            logits = torch.matmul(emb.squeeze(0), codebook.T)
+            
+            logits /= 0.1
+            
+            units = torch.argmax(logits, dim=-1).flatten().cpu().numpy()
+            
+            # Median Filtering
+            from scipy.signal import medfilt
+            
+            smoothed_units = medfilt(units, kernel_size=3) 
+            
+            units_tensor = torch.from_numpy(smoothed_units).to(torch.long)
+            
+            # 중간 지점 계산
+            mid = len(units_tensor) // 2
+            # 중간 지점부터 10개 출력 (범위 초과 방지 위해 min 사용)
+            mid_pattern = units_tensor[mid : mid + 10].tolist()
+            
+            unique_units = torch.unique(units_tensor)
+          
+            print(f"DEBUG: Layers Avg | Unique: {len(unique_units)} | Mid-Pattern: {mid_pattern}")
             
         # 저장
         save_data = {
-            'code': units.to(torch.long),
+            'code': units_tensor,
             'spkr': torch.zeros(256).float(),
-            'f0': torch.zeros(len(units)).float(),
+            'f0': torch.zeros(len(units_tensor)).float(),
             'dur_prediction': False
         }
         
         save_path = os.path.join(OUT_DIR, os.path.basename(f).replace(".wav", ".pt"))
         torch.save(save_data, save_path)
-        print(f"[{i+1}/10] ✅ Done: {os.path.basename(f)} ({len(units)} units)")
+        if (i + 1) % 100 == 0:
+            print(f"[{i+1}/{len(all_files)}] Progressing...")
         
     except Exception as e:
         import traceback
