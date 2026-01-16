@@ -8,7 +8,7 @@ This repository is built upon [AV2AV](https://github.com/choijeongsoo/av2av?tab=
 ## Unit2A 학습 위한 환경 설정 - 규철
 ### 1. 가연 서버(리눅스) 가상환경
 
-```cpp
+```bash
 conda activate gyucheol
 ```
 
