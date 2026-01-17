@@ -9,10 +9,20 @@ train_unit2a.py는 매니페스트 파일(텍스트) 내에 오디오 경로와 
 -> 유닛 코드(.pt 파일) + 원본 오디오 경로 -> 텍스트 파일로 변환 
 '''
 
+import argparse
+
+# Argument Parser 설정
+parser = argparse.ArgumentParser(description='Create manifest file for unit2av training')
+parser.add_argument('--audio_root', type=str, required=True, help='Root directory of audio files')
+parser.add_argument('--unit_root', type=str, required=True, help='Root directory of unit (.pt) files')
+parser.add_argument('--output_file', type=str, default='train_hubert.txt', help='Output manifest file path')
+
+args = parser.parse_args()
+
 # 경로 설정
-audio_root = '/home/2022113135/datasets/zeroth/train_data_01/003'
-unit_root = '/home/2022113135/datasets/zeroth_units'
-output_file = 'train_100.txt'
+audio_root = args.audio_root
+unit_root = args.unit_root
+output_file = args.output_file
 
 # 1. 유닛 파일(.pt) 검색
 # 유닛 파일이 "선별된" 데이터이므로, 유닛 파일을 기준으로 오디오를 매칭합니다.
@@ -20,12 +30,12 @@ unit_files = sorted(glob.glob(os.path.join(unit_root, '*.pt')))
 print(f"Total unit files found: {len(unit_files)}")
 
 # 2. 100개만 선별
-target_unit_files = unit_files[:100]
+target_unit_files = unit_files
 
 lines = []
 for unit_path in target_unit_files:
     # unit_path: .../113_003_0012.pt
-    fname = os.path.basename(unit_path)
+    fname = os.path.basename(unit_path)[:-16]+ ".pt"
     # fname: 113_003_0012.pt
     
     # 오디오 파일명 추론: 113_003_0012.wav
