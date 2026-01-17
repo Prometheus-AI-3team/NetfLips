@@ -183,8 +183,8 @@ class CodeHiFiGANModel_spk(CodeHiFiGANModel):
             spkr = self._upsample(spkr, x.shape[-1])
             x = torch.cat([x, spkr], dim=1)
 
-            feat = self._upsample(feat, x.shape[-1])
-            x = torch.cat([x, feat], dim=1)
+            # feat = self._upsample(feat, x.shape[-1])
+            # x = torch.cat([x, feat], dim=1)
         
         dur_losses = None
         if self.dur_predictor and self.training:
