@@ -110,18 +110,23 @@ def parse_manifest(manifest):
         for line in info.readlines():
             if line[0] == '{':
                 sample = eval(line.strip())
-                if 'cpc_km100' in sample:
-                    k = 'cpc_km100'
-                elif 'vqvae256' in sample:
-                    k = 'vqvae256'
-                elif 'hubert' in sample:
-                    k = 'hubert'
+                if 'unit_path' in sample:
+                    # Store path directly
+                    codes += [sample['unit_path']]
                 else:
-                    k = 'codes'
+                    if 'cpc_km100' in sample:
+                        k = 'cpc_km100'
+                    elif 'vqvae256' in sample:
+                        k = 'vqvae256'
+                    elif 'hubert' in sample:
+                        k = 'hubert'
+                    else:
+                        k = 'codes'
 
-                codes += [torch.LongTensor(
-                    [int(x) for x in sample[k].split(' ')]
-                ).numpy()]
+                    codes += [torch.LongTensor(
+                        [int(x) for x in sample[k].split(' ')]
+                    ).numpy()]
+                
                 audio_files += [Path(sample["audio"])]
             else:
                 audio_files += [Path(line.strip())]
@@ -161,6 +166,7 @@ class CodeDataset(torch.utils.data.Dataset):
                  f0_stats=None, f0_normalize=False, f0_feats=False, f0_median=False,
                  f0_interp=False, vqvae=False):
         self.audio_files, self.codes = training_files
+        # self.codes can be a list of unit paths or list of codes
         random.seed(1234)
         self.segment_size = segment_size
         self.code_hop_size = code_hop_size
@@ -188,7 +194,7 @@ class CodeDataset(torch.utils.data.Dataset):
             self.f0_stats = torch.load(f0_stats)
         self.multispkr = multispkr
         self.pad = pad
-        if self.multispkr:
+        if self.multispkr and isinstance(self.multispkr, str): # Only if multispkr is a method string
             spkrs = [parse_speaker(f, self.multispkr) for f in self.audio_files]
             spkrs = list(set(spkrs))
             spkrs.sort()
@@ -220,6 +226,21 @@ class CodeDataset(torch.utils.data.Dataset):
 
     def __getitem__(self, index):
         filename = self.audio_files[index]
+        code_data = self.codes[index]
+        
+        # Determine if code_data is a path (str) or codes (numpy array)
+        unit_path = None
+        loaded_spkr = None
+        
+        if isinstance(code_data, str) and code_data.endswith('.pt'):
+             unit_path = code_data
+             pt_data = torch.load(unit_path)
+             code = pt_data['code'].squeeze()
+             if 'spkr' in pt_data:
+                 loaded_spkr = pt_data['spkr']
+        else:
+             code = code_data
+
         if self._cache_ref_count == 0:
             audio, sampling_rate = load_audio(filename)
             if sampling_rate != self.sampling_rate:
@@ -243,8 +264,8 @@ class CodeDataset(torch.utils.data.Dataset):
         if self.vqvae:
             code_length = audio.shape[0] // self.code_hop_size
         else:
-            code_length = min(audio.shape[0] // self.code_hop_size, self.codes[index].shape[0])
-            code = self.codes[index][:code_length]
+            code_length = min(audio.shape[0] // self.code_hop_size, code.shape[0])
+            code = code[:code_length]
         audio = audio[:code_length * self.code_hop_size]
         assert self.vqvae or audio.shape[0] // self.code_hop_size == code.shape[0], "Code audio mismatch"
 
@@ -260,6 +281,11 @@ class CodeDataset(torch.utils.data.Dataset):
         if self.vqvae:
             audio = self._sample_interval([audio])[0]
         else:
+            if isinstance(code, torch.Tensor):
+                code = code.numpy()
+            # If code is int, expand it
+            if len(code.shape) == 0:
+                 code = code[None]
             audio, code = self._sample_interval([audio, code])
 
         mel_loss = mel_spectrogram(audio, self.n_fft, self.num_mels,
@@ -282,7 +308,11 @@ class CodeDataset(torch.utils.data.Dataset):
             feats['f0'] = f0.squeeze(0)
 
         if self.multispkr:
-            feats['spkr'] = self._get_spkr(index)
+            if loaded_spkr is not None:
+                # Add dimension: [256] -> [1, 256]
+                feats['spkr'] = loaded_spkr.view(1, -1)
+            else:
+                feats['spkr'] = self._get_spkr(index)
 
         if self.f0_normalize:
             spkr_id = self._get_spkr(index).item()
