@@ -234,7 +234,9 @@ class CodeDataset(torch.utils.data.Dataset):
         
         if isinstance(code_data, str) and code_data.endswith('.pt'):
              unit_path = code_data
-             pt_data = torch.load(unit_path)
+             #pt_data = torch.load(unit_path)
+             pt_data = torch.load(unit_path, map_location='cpu')
+
              code = pt_data['code'].squeeze()
              if 'spkr' in pt_data:
                  loaded_spkr = pt_data['spkr']
