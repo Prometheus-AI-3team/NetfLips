@@ -11,6 +11,12 @@ import numpy as np
 import cv2
 
 def process_duration(code, code_feat):
+    '''
+    새로 추가한 부분 
+    from speech-resynthesis의 DurationCodeGenerator
+
+
+    '''
     uniq_code_count = []
     uniq_code_feat = []
     for i in range(code.size(0)):
@@ -182,9 +188,11 @@ class CodeHiFiGANModel_spk(CodeHiFiGANModel):
             spkr = self.spkr(kwargs["spkr"]).transpose(1, 2)
             spkr = self._upsample(spkr, x.shape[-1])
             x = torch.cat([x, spkr], dim=1)
-
-            # feat = self._upsample(feat, x.shape[-1])
-            # x = torch.cat([x, feat], dim=1)
+#            for k, feat in kwargs.items():
+#                if k in ["spkr", "code", "f0", "dur_prediction"]:
+#                    continue
+#                feat = self._upsample(feat, x.shape[-1])
+#                x = torch.cat([x, feat], dim=1)
         
         dur_losses = None
         if self.dur_predictor and self.training:
