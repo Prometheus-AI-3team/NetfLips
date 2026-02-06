@@ -66,7 +66,7 @@ def cli_main():
     )
     parser.add_argument(
         "--tgt-lang", type=str, required=True,
-        choices=["en","es","fr","it","pt"],
+        choices=["en","es","fr","it","pt", "ko"],
         help="target language"
     )
     parser.add_argument(
