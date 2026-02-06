@@ -21,6 +21,11 @@ from librosa.util import normalize
 
 MAX_WAV_VALUE = 32768.0
 
+# [FIX] mel_spectrogram 함수에서 사용하는 전역변수를 함수 정의 전에 초기화
+# 기존에는 함수 뒤에 정의되어 있어 "mel_basis is not defined" 에러 발생 가능
+mel_basis = {}
+hann_window = {}
+
 
 def get_yaapt_f0(audio, rate=16000, interp=False):
     frame_length = 20.0
@@ -96,10 +101,6 @@ def spectral_normalize_torch(magnitudes):
 def spectral_de_normalize_torch(magnitudes):
     output = dynamic_range_decompression_torch(magnitudes)
     return output
-
-
-mel_basis = {}
-hann_window = {}
 
 
 def parse_manifest(manifest):
