@@ -51,11 +51,17 @@ def train(rank, local_rank, a, h):
         os.makedirs(a.checkpoint_path, exist_ok=True)
         print("checkpoints directory : ", a.checkpoint_path)
 
+    # [FIX] checkpoint_path가 존재하지 않을 경우를 대비해 변수 초기화
+    cp_g = None
+    cp_do = None
     if os.path.isdir(a.checkpoint_path):
         cp_g = scan_checkpoint(a.checkpoint_path, 'g_')
         cp_do = scan_checkpoint(a.checkpoint_path, 'do_')
 
     steps = 0
+    # Best model tracking (based on validation mel_error, like HuggingFace's load_best_model_at_end)
+    best_val_error = float('inf')
+
     if cp_g is None or cp_do is None:
         state_dict_do = None
         last_epoch = -1
@@ -67,6 +73,9 @@ def train(rank, local_rank, a, h):
         msd.load_state_dict(state_dict_do['msd'])
         steps = state_dict_do['steps'] + 1
         last_epoch = state_dict_do['epoch']
+        # Restore best_val_error if available (for continued training)
+        if 'best_val_error' in state_dict_do:
+            best_val_error = state_dict_do['best_val_error']
 
     if h.num_gpus > 1:
         generator = DistributedDataParallel(
@@ -199,22 +208,20 @@ def train(rank, local_rank, a, h):
                     save_checkpoint(checkpoint_path, {'mpd': (mpd.module if h.num_gpus > 1 else mpd).state_dict(),
                                                       'msd': (msd.module if h.num_gpus > 1 else msd).state_dict(),
                                                       'optim_g': optim_g.state_dict(), 'optim_d': optim_d.state_dict(),
-                                                      'steps': steps, 'epoch': epoch})
+                                                      'steps': steps, 'epoch': epoch, 'best_val_error': best_val_error})
 
                 # Tensorboard summary logging
                 if steps % a.summary_interval == 0:
                     sw.add_scalar("training/gen_loss_total", loss_gen_all, steps)
                     sw.add_scalar("training/mel_spec_error", mel_error, steps)
-                    if h.get('f0_vq_params', None):
-                        sw.add_scalar("training/commit_error", f0_commit_loss, steps)
-                        sw.add_scalar("training/used_curr", f0_metrics['used_curr'].item(), steps)
-                        sw.add_scalar("training/entropy", f0_metrics['entropy'].item(), steps)
-                        sw.add_scalar("training/usage", f0_metrics['usage'].item(), steps)
-                    if h.get('code_vq_params', None):
-                        sw.add_scalar("training/code_commit_error", code_commit_loss, steps)
-                        sw.add_scalar("training/code_used_curr", code_metrics['used_curr'].item(), steps)
-                        sw.add_scalar("training/code_entropy", code_metrics['entropy'].item(), steps)
-                        sw.add_scalar("training/code_usage", code_metrics['usage'].item(), steps)
+                    sw.add_scalar("training/gen_loss_f", loss_gen_f, steps)
+                    sw.add_scalar("training/gen_loss_s", loss_gen_s, steps)
+                    sw.add_scalar("training/fm_loss_f", loss_fm_f, steps)
+                    sw.add_scalar("training/fm_loss_s", loss_fm_s, steps)
+
+                    # [FIX] VQ-VAE 관련 로깅 코드 삭제 - f0_commit_loss, f0_metrics,
+                    # code_commit_loss, code_metrics 변수가 정의되지 않아 에러 발생
+                    # VQ-VAE 사용 시 generator 출력에서 해당 값들을 받아와야 함
 
                 # Validation
                 if steps % a.validation_interval == 0:  # and steps != 0:
@@ -245,6 +252,23 @@ def train(rank, local_rank, a, h):
 
                         val_err = val_err_tot / (j + 1)
                         sw.add_scalar("validation/mel_spec_error", val_err, steps)
+
+                        # Save best model based on validation mel_error (like HuggingFace's load_best_model_at_end)
+                        if val_err < best_val_error:
+                            best_val_error = val_err
+                            # Save generator
+                            checkpoint_path = "{}/g_best".format(a.checkpoint_path)
+                            save_checkpoint(checkpoint_path,
+                                            {'generator': (generator.module if h.num_gpus > 1 else generator).state_dict()})
+                            # Save discriminator & optimizer state
+                            checkpoint_path = "{}/do_best".format(a.checkpoint_path)
+                            save_checkpoint(checkpoint_path,
+                                            {'mpd': (mpd.module if h.num_gpus > 1 else mpd).state_dict(),
+                                             'msd': (msd.module if h.num_gpus > 1 else msd).state_dict(),
+                                             'optim_g': optim_g.state_dict(), 'optim_d': optim_d.state_dict(),
+                                             'steps': steps, 'epoch': epoch, 'best_val_error': best_val_error})
+                            print(f"Steps : {steps}, New Best Val Mel Error : {best_val_error:.4f} -> Saved best model.")
+
                     generator.train()
 
             steps += 1
@@ -298,6 +322,8 @@ def main():
         rank = a.local_rank
         print('Batch size per GPU :', h.batch_size)
     else:
+        # [FIX] 단일 GPU 환경에서 num_gpus 설정 누락 수정
+        h.num_gpus = 1
         rank = 0
         local_rank = 0
 
