@@ -48,14 +48,19 @@ def save_video(audio, video, full_video, bbox, save_video_path, sampling_rate=16
     out = cv2.VideoWriter(temp_video_path, cv2.VideoWriter_fourcc(*'DIVX'), fps, (frame_w, frame_h))
     
     for p, f, c in zip(video, full_video, bbox):
+        #modified : if bbox is None, write original frame
+        if c is None:
+            out.write(f)
+            continue
         x1, y1, x2, y2 = [max(int(_), 0) for _ in c]
-        p = cv2.resize(p, (x2 - x1, y2 - y1))
-        try:
-            f[y1:y2, x1:x2] = p
-        except:
-            height, width, c = f[y1:y2, x1:x2].shape
-            p = cv2.resize(p, (width, height))
-            f[y1:y2, x1:x2] = p
+        if x2 - x1 > 0 and y2 - y1 > 0:
+            p = cv2.resize(p, (x2 - x1, y2 - y1))
+            try:
+                f[y1:y2, x1:x2] = p
+            except:
+                height, width, c = f[y1:y2, x1:x2].shape
+                p = cv2.resize(p, (width, height))
+                f[y1:y2, x1:x2] = p
         out.write(f)
 
     out.release()

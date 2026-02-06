@@ -73,19 +73,21 @@ class UnitAVRenderer(CodeHiFiGANVocoder):
 
     def get_crops(self, bbox_path):
         bbs = pickle.load(open(bbox_path, 'rb'))
-        prev_val = None
-        for i in range(len(bbs)):
-            if bbs[i] is None:
-                bbs[i] = prev_val
-            else:
-                prev_val = bbs[i]
-        return np.array(bbs)
+        return np.array(bbs, dtype=object)
 
     def read_window(self, frames, crops):
         window = []
-        for img, (x1, y1, x2, y2) in zip(frames, crops):
+        for img, crop in zip(frames, crops):
+            # modified : if bbox is None, write black image
+            if crop is None:
+                window.append(np.zeros((96, 96, 3), dtype=np.uint8))
+                continue
+            x1, y1, x2, y2 = crop
             img = img[max(int(y1), 0): int(y2), max(int(x1), 0):int(x2)]
-            img = cv2.resize(img, (96, 96))
+            if img.size == 0:
+                img = np.zeros((96, 96, 3), dtype=np.uint8)
+            else:
+                img = cv2.resize(img, (96, 96))
             window.append(img)
         return window 
 
