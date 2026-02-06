@@ -104,39 +104,6 @@ python unit2av/inference.py
 - `--unit2av-path`: Path to the .pt checkpoint file you are using.
 - `--tgt-lang`: The target language (e.g., en, ko, etc.).
 
-# 4. 코드베이스
-```bash
-av2av-main/
-├── av2unit/                 
-├── unit2av/                  
-│   ├── checkpoint/           # 학습된 모델 체크포인트 저장 폴더
-│   ├── modules/              # 모델 구성 서브 모듈          <- from speech-resynthesis 
-│   ├── config.json           # 기본 학습 설정
-│   ├── config_hubert.json    # HuBERT 기반 설정 (dim_embedding=1024)
-│   ├── config_seamless.json  # Seamless 기반 설정 (dim_embedding=10000)
-│   ├── dataset.py            # 데이터 로더 및 데이터셋 정의 <- from speech-resynthesis 
-│   ├── discriminators.py     # GAN Discriminator 정의     <- from speech-resynthesis 
-│   ├── encoder.pt            # 사전 학습된 인코더 가중치
-│   ├── inference.py          # Unit2AV 추론 스크립트     
-│   ├── make_manifest.py      # 데이터셋 매니페스트 생성 유틸리티 <- 모델에 텍스트로 경로 넣어줘야해서 만든 스크립트
-│   ├── model.py              # 메인 모델(Generator) 아키텍처 <- speech-resynthesis 참조해서 수정
-│   ├── model_speaker_encoder.py
-│   ├── utils.py              # 기타 유틸리티 함수           <- from speech-resynthesis 
-│   └── __init__.py
-├── unit2unit/                
-├── fairseq/                  
-├── imgs/                     
-├── samples/                  
-├── dict.txt                  
-├── inference.py             
-├── train_hubert_2000.txt     # HuBERT 데이터 리스트    <- make_manifest.py로 생성된 파일
-├── train_seamless_2000.txt   # Seamless 데이터 리스트  <- make_manifest.py로 생성된 파일
-├── train_unit2a.py           # Unit2AV 학습 메인 스크립트 <- from speech-resynthesis
-├── util.py                   
-├── README.md                 
-└── LICENSE                   
-```
-
 # 4. 원본 코드 수정한 부분
 
 ### `unit2av/model.py`
