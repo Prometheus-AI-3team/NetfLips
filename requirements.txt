@@ -1,0 +1,21 @@
+# --- Core Libraries (버전 고정 필수) ---
+numpy<1.24
+scipy==1.10.0
+librosa==0.8.1
+resampy==0.4.3
+opencv-python==4.5.4.60
+tensorboard
+tensorboardX
+
+# --- Audio & Video Processing ---
+python-speech-features==0.6
+soundfile
+av
+ffmpeg-python
+amfm_decompy
+matplotlib
+tqdm
+
+# --- System & Config ---
+omegaconf==2.0.6
+hydra-core==1.0.7
