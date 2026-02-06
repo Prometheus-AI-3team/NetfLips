@@ -2,6 +2,15 @@
 
 Scripts for detecting faces, extracting lip regions, and managing bounding box metadata for video processing.
 
+## Environment Setup
+
+Create and activate a conda environment for the lip extraction scripts:
+
+```bash
+conda env create -f environment.yml
+conda activate lip_extraction
+```
+
 
 ## Core Extraction Scripts
 
