@@ -37,7 +37,7 @@ cd av2av-main/fairseq
 pip install -e .
 ```
 
-# 2. 학습 실행
+# 2. UNIT2A 학습 실행
 
 ### 1. 학습 데이터 경로 포함하는 manifest 생성
 
