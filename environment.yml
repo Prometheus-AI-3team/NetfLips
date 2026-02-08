@@ -1,4 +1,4 @@
-name: unit2a
+name: netflips
 channels:
   - conda-forge
   - defaults
