@@ -1,0 +1,48 @@
+arch: mbart_large
+criterion: focal_label_smoothed_cross_entropy
+focal_gamma: 2.0
+task: translation_from_pretrained_bart
+data: /home/2022113135/jjs/av2av/unit2unit/utut_finetune/data/dataset_mbart_ft_bin_data/en/aihub_ko
+# ddp_backend: legacy_ddp
+distributed_init_method: null
+# distributed_no_spawn: false
+distributed_num_procs: 1  #8 # Adjust to available system
+distributed_port: -1
+distributed_world_size: 1 # fairseq가 사용할 GPU 수 (world size)
+label_smoothing: 0.2 ##################
+langs: en,es,fr,it,pt,el,ru,cs,da,de,fi,hr,hu,lt,nl,pl,ro,sk,sl,ko # ADD [KO]
+log_interval: 100
+lr:
+- 0.00005  # Lower LR for low-resource fine-tuning 
+max_update: 700000 
+nprocs_per_node: 8
+num_workers: 4 #3
+report_accuracy: true
+save_dir: ./utut_idx1004_ckpt/unit_mbart_ko_ft/en_ko
+tensorboard_logdir: ./utut_idx1004_ckpt/unit_mbart_ko_ft/en_ko
+total_num_update: 700000
+train_subset: train
+update_freq:
+-  1 #72 # Effective batch size = max_tokens * update_freq
+user_dir: ./
+valid_subset: valid
+max_tokens: 1024
+batch_size: 256 # default=128
+multilang_sampling_alpha: 1.0
+# dataset_impl: raw
+# restore_file: /home/2022113135/jjs/av2av/unit2unit/utut_finetune/utut_ckpt/unit_mbart_multilingual_ft/en_ko/checkpoint_best.pt #../../ckpt/utut_sts_ft.pt # base checkpoint
+# reset_optimizer: true
+# reset_meters: true
+# reset_dataloader: true
+# reset_lr_scheduler: true
+# finetune_from_model: /home/2022113135/jjs/av2av/ckpts/utut_sts_add_ko_init.pt # restore-file은 가중치와 Optimizer state를 100% 동일하게 복원 ->크기 불일치에 매우 민감
+finetune_from_model: /home/2022113135/jjs/av2av/ckpts/utut_sts_add_ko_idx1004.pt #/home/2022113135/jjs/av2av/ckpts/utut_sts_add_ko_randinit.pt
+source_lang: en
+target_lang: ko
+prepend_bos: true
+left_pad_source: false
+left_pad_target: false
+ # Low-resource tips by Claude:                                                                                
+dropout: 0.3  # Higher dropout 0.3        
+weight_decay: 0.0001 # defaut 0.0                                                    
+# warmup_updates: 4000 
