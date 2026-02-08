@@ -1,7 +1,7 @@
 # 1. 환경 설정
 ```bash
-# 1. 규철 브랜치 클론 서브모듈 다운로드
-git clone -b unit2a --single-branch https://github.com/Prometheus-AI-3team/NetfLips.git
+# 1. 레포지토리 클론
+git clone https://github.com/Prometheus-AI-3team/NetfLips.git
 
 cd NetfLips
 
