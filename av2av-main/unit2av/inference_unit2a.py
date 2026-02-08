@@ -4,8 +4,8 @@ import torch
 import soundfile as sf
 import re
 import os
-from unit2av.model import CodeHiFiGANModel_spk
-from unit2av.utils import AttrDict
+from model import CodeHiFiGANModel_spk
+from utils import AttrDict
 
 def main():
     parser = argparse.ArgumentParser()

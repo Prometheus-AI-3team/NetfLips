@@ -2,12 +2,16 @@
 
 import argparse
 import os
+import sys
+
 import json
 import torch
 
 from fairseq import utils
-from unit2av.model import UnitAVRenderer
-from unit2av.model_speaker_encoder import SpeakerEncoder
+from model import UnitAVRenderer
+from model_speaker_encoder import SpeakerEncoder
+
+sys.path.append(os.path.dirname(os.path.abspath(os.path.dirname(__file__))))
 from util import save_video, extract_audio_from_video
 
 def load_model(model_path, cfg_path, lang, use_cuda=False):
