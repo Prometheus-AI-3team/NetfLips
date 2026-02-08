@@ -21,10 +21,10 @@ from torch.utils.tensorboard import SummaryWriter
 from torch.utils.data import DistributedSampler, DataLoader
 from torch.distributed import init_process_group
 from torch.nn.parallel import DistributedDataParallel
-from unit2av.dataset import CodeDataset, mel_spectrogram, get_dataset_filelist
-from unit2av.discriminators import MultiPeriodDiscriminator, MultiScaleDiscriminator, feature_loss, generator_loss, discriminator_loss  # models -> discriminators 로 변경됨
-from unit2av.utils import plot_spectrogram, scan_checkpoint, load_checkpoint, save_checkpoint, build_env, AttrDict
-from unit2av.model import CodeHiFiGANModel_spk
+from dataset import CodeDataset, mel_spectrogram, get_dataset_filelist
+from discriminators import MultiPeriodDiscriminator, MultiScaleDiscriminator, feature_loss, generator_loss, discriminator_loss  # models -> discriminators 로 변경됨
+from utils import plot_spectrogram, scan_checkpoint, load_checkpoint, save_checkpoint, build_env, AttrDict
+from model import CodeHiFiGANModel_spk
 
 torch.backends.cudnn.benchmark = True
 
