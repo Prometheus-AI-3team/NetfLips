@@ -56,8 +56,24 @@ class UnitAVRenderer(CodeHiFiGANVocoder):
         self.model.load_state_dict(state_dict["audio"][lang])
         self.model.eval()
 
-        self.face_model = FaceRenderer(unit_num=model_cfg["num_embeddings"])
-        self.face_model.load_state_dict(state_dict["video"])
+        self.face_model = FaceRenderer(unit_num=model_cfg["num_embeddings"])      
+        face_state_dict = state_dict["video"]
+        
+        # unit_embed만 특별 처리
+        current_embed = self.face_model.unit_embed.weight.data
+        checkpoint_embed = face_state_dict['unit_embed.weight']
+
+        # 기존 1000개는 체크포인트 값 사용
+        current_embed[:1000] = checkpoint_embed
+
+        # 새로운 24개는 기존 임베딩의 평균이나 랜덤으로 초기화
+        # 옵션 1: 마지막 임베딩 복사
+        current_embed[1000:] = checkpoint_embed[-1].unsqueeze(0).repeat(24, 1)
+
+        # unit_embed.weight를 state_dict에서 제거하고 나머지 로드
+        face_state_dict.pop('unit_embed.weight')
+        self.face_model.load_state_dict(face_state_dict, strict=False)
+
         self.face_model.eval()
 
         if fp16:
