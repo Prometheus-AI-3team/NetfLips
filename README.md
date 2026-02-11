@@ -112,6 +112,22 @@ pip install -e .
 | Unit2Unit | `utut_sts_ft.pt` | [download]() |
 | Unit2AV | `unit_av_renderer_withKO.pt` | [download](https://drive.google.com/file/d/1vNaJGWqqC8VAzEXTEYb33fq5PsfE74F6/view?usp=drive_link) |
 
+### End-to-End Inference
+```bash
+PYTHONPATH=fairseq python inference.py \
+  --in-vid-path samples/en/TRajLqEaWhQ_00002.mp4 \
+  --out-vid-path samples/es/TRajLqEaWhQ_00002.mp4 \
+  --src-lang en --tgt-lang ko \
+  --av2unit-path /path/to/mavhubert_large_noise.pt \
+  --utut-path /path/to/utut_sts_ft.pt \
+  --unit2av-path /path/to/unit_av_renderer_withKO.pt \
+```
+
+### Training & Inference
+각 모듈의 학습 및 추론은 해당하는 모듈의 README.md를 참고해주세요.
+
+
+
 ### Quick Start
 
 ```python
