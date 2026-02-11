@@ -105,6 +105,12 @@ pip install -e .
 ---
 
 ## 💻 Usage
+### Checkpoints
+| Model | Name | link |
+| --- | --- | --- |
+| AV2Unit | `mav_hubert_large_noise.py` | [download]() |
+| Unit2Unit | `utut_sts_ft.pt` | [download]() |
+| Unit2AV | `unit_av_renderer_withKO.pt` | [download](https://drive.google.com/file/d/1vNaJGWqqC8VAzEXTEYb33fq5PsfE74F6/view?usp=drive_link) |
 
 ### Quick Start
 
@@ -124,13 +130,23 @@ pip install -e .
 
 ```
 NetfLips/
-├── # 추후 업데이트
-├── 
-├── 
-├── 
-├── 
-├── 
-└── README.md
+├── av2unit/                  # Audio-Visual to Unit Extraction
+│   ├── avhubert/             # Feature extraction using AV-HuBERT
+│   └── inference.py          # Unit extraction inference script
+├── unit2unit/                # Unit to Unit Translation
+│   ├── utut_pretrain/        # Pre-training modules
+│   ├── utut_finetune/        # Fine-tuning modules
+│   └── inference.py          # Translation inference script
+├── unit2av/                  # Unit to Audio-Visual Generation
+│   ├── model.py              # Unit2AV model definition
+│   ├── train_unit2a.py       # Training script for Unit2Audio
+│   └── inference_unit2av.py  # Inference scripts
+├── fairseq/                  # Fairseq Toolkit (Submodule)
+├── preparation/              # Data Preprocessing Scripts
+├── scripts/                  # Utility Scripts
+├── inference_av2av.py        # Main End-to-End Inference Script
+├── environment.yml           # Conda Environment Configuration
+└── requirements.txt          # Python Dependencies
 ```
 
 ---
