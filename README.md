@@ -115,8 +115,8 @@ pip install -e .
 ### End-to-End Inference
 ```bash
 PYTHONPATH=fairseq python inference.py \
-  --in-vid-path samples/en/TRajLqEaWhQ_00002.mp4 \
-  --out-vid-path samples/es/TRajLqEaWhQ_00002.mp4 \
+  --in-vid-path /path/to/input.mp4 \
+  --out-vid-path /path/to/output.mp4 \
   --src-lang en --tgt-lang ko \
   --av2unit-path /path/to/mavhubert_large_noise.pt \
   --utut-path /path/to/utut_sts_ft.pt \
