@@ -125,21 +125,6 @@ PYTHONPATH=fairseq python inference.py \
 
 ### Training & Inference
 각 모듈의 학습 및 추론(`av2unit`, `unit2unit`, `unit2av`)은 해당하는 모듈의 `README.md`를 참고해주세요.
-
-
-
-### Quick Start
-
-```python
-# 사용 예제 코드 (추후 업데이트)
-```
-
-### Advanced Usage
-
-```bash
-# 커맨드라인 사용법 (추후 업데이트)
-```
-
 ---
 
 ## 📁 Project Structure
