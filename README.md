@@ -109,7 +109,7 @@ pip install -e .
 | Model | Name | link |
 | --- | --- | --- |
 | AV2Unit | `mav_hubert_large_noise.py` | [download]() |
-| Unit2Unit | `utut_sts_ft.pt` | [download]() |
+| Unit2Unit | `utut_sts_ft.pt` | [download](https://drive.google.com/file/d/1euZ0PZT9W50KxadexSuqf6WMmyw4cluE/view?usp=drive_link) |
 | Unit2AV | `unit_av_renderer_withKO.pt` | [download](https://drive.google.com/file/d/1vNaJGWqqC8VAzEXTEYb33fq5PsfE74F6/view?usp=drive_link) |
 
 ### End-to-End Inference
@@ -124,7 +124,7 @@ PYTHONPATH=fairseq python inference.py \
 ```
 
 ### Training & Inference
-각 모듈의 학습 및 추론은 해당하는 모듈의 README.md를 참고해주세요.
+각 모듈의 학습 및 추론(`av2unit`, `unit2unit`, `unit2av`)은 해당하는 모듈의 `README.md`를 참고해주세요.
 
 
 
