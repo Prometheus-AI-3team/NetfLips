@@ -108,8 +108,8 @@ pip install -e .
 ### Checkpoints
 | Model | Name | link |
 | --- | --- | --- |
-| AV2Unit | `mav_hubert_large_noise.py` | [download]() |
-| Unit2Unit | `utut_sts_ft.pt` | [download](https://drive.google.com/file/d/1euZ0PZT9W50KxadexSuqf6WMmyw4cluE/view?usp=drive_link) |
+| AV2Unit | `mav_hubert_large_noise.py` | [download](https://drive.google.com/file/d/18qiZkzrhDtaaleUPiOXf8WDKS9ZumUTa/view?usp=sharing) |
+| Unit2Unit | `utut_sts_ft.pt` | [download](https://drive.google.com/file/d/12kNqrl2EuqkDwUvekib7_Ou7fUwUnYBU/view?usp=sharing) |
 | Unit2AV | `unit_av_renderer_withKO.pt` | [download](https://drive.google.com/file/d/1vNaJGWqqC8VAzEXTEYb33fq5PsfE74F6/view?usp=drive_link) |
 
 ### End-to-End Inference
