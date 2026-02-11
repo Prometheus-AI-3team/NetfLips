@@ -142,8 +142,7 @@ NetfLips/
 │   ├── train_unit2a.py       # Training script for Unit2Audio
 │   └── inference_unit2av.py  # Inference scripts
 ├── fairseq/                  # Fairseq Toolkit (Submodule)
-├── preparation/              # Data Preprocessing Scripts
-├── scripts/                  # Utility Scripts
+├── scripts/                  # Utility Scripts for Data Preparation
 ├── inference_av2av.py        # Main End-to-End Inference Script
 ├── environment.yml           # Conda Environment Configuration
 └── requirements.txt          # Python Dependencies
